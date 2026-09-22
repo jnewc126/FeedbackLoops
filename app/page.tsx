@@ -21,7 +21,10 @@ export default function Home() {
 
   return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <h1 className={`${typewriterFont.className} text-8xl font-bold text-zinc-900`}>
+        <h1
+            className={`${typewriterFont.className} text-6xl font-bold text-zinc-900 text-left`}
+            style={{ width: `${fullText.length}ch` }}
+        >
           {text}
         </h1>
       </div>

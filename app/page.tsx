@@ -15,13 +15,13 @@ export default function Home() {
       index++;
       setText(fullText.slice(0, index));
       if (index === fullText.length) clearInterval(interval);
-    }, 500);
+    }, 100);
     return () => clearInterval(interval);
   }, []);
 
   return (
       <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <h1 className={`${typewriterFont.className} text-5xl font-bold text-zinc-900`}>
+        <h1 className={`${typewriterFont.className} text-8xl font-bold text-zinc-900`}>
           {text}
         </h1>
       </div>

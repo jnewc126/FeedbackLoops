@@ -1,32 +1,8 @@
-"use client";
+import {createClient} from '@supabase/supabase-js';
 
-import { useEffect, useState } from "react";
-import { Special_Elite } from "next/font/google";
-
-const typewriterFont = Special_Elite({ weight: "400", subsets: ["latin"] });
-
-export default function Home() {
-  const fullText = "Hello World";
-  const [text, setText] = useState("");
-
-  useEffect(() => {
-    let index = 0;
-    const interval = setInterval(() => {
-      index++;
-      setText(fullText.slice(0, index));
-      if (index === fullText.length) clearInterval(interval);
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <h1
-            className={`${typewriterFont.className} text-6xl font-bold text-zinc-900 text-left`}
-            style={{ width: `${fullText.length}ch` }}
-        >
-          {text}
-        </h1>
-      </div>
-  );
+export default async function Home() {
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    const {data, error} = await supabase.from('messages').select('id, text').limit(10);
+    if (error) return <p>{error.message}</p>;
+    return (<ul> {data?.map((row) => (<li key={row.id}>{row.text}</li>))} </ul>);
 }

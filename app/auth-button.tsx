@@ -28,6 +28,8 @@ export default function AuthButton() {
             <div className="flex items-center gap-3"><span className="text-sm text-zinc-600">{user.email}</span> <Link
                 href="/profile"
                 className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100"> Profile </Link>
+                <Link href="/generate"
+                      className="rounded-full bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-800"> Generate </Link>
                 <button onClick={signOut}
                         className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100"> Sign
                     out

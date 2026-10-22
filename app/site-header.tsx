@@ -24,10 +24,12 @@ export default async function SiteHeader() {
                     <span className="font-display text-lg font-semibold tracking-tight sm:text-xl">FeedbackLoops</span>
                 </Link>
                 <nav aria-label="Main" className="flex items-center gap-1 sm:gap-2">
-                    <NavLink href="/" activeClassName="text-ink underline decoration-amber decoration-2 underline-offset-[6px]"
-                             className="hidden rounded-control px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-ink sm:block">
-                        Feed
-                    </NavLink>
+                    {!viewer && (
+                        <NavLink href="/" activeClassName="text-ink underline decoration-amber decoration-2 underline-offset-[6px]"
+                                 className="hidden rounded-control px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-ink sm:block">
+                            Feed
+                        </NavLink>
+                    )}
                     <AuthButton viewer={viewer}/>
                 </nav>
             </div>

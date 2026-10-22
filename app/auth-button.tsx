@@ -2,8 +2,7 @@
 import {useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {createClient} from '@/app/lib/supabase/client';
-import NavLink from './nav-link';
-import Avatar, {initialsFor} from './avatar';
+import AccountMenu from './account-menu';
 import type {Viewer} from './lib/viewer';
 
 export function GoogleIcon() {
@@ -53,33 +52,7 @@ export default function AuthButton({viewer}: { viewer: Viewer | null }) {
         supabase.auth.signOut().then(() => window.location.reload());
     };
     if (viewer) {
-        const name = [viewer.firstName, viewer.lastName].filter(Boolean).join(' ') || viewer.email || 'Your profile';
-        return (
-            <div className="flex items-center gap-1 sm:gap-2">
-                <NavLink href="/generate" activeClassName="ring-2 ring-amber ring-offset-2 ring-offset-paper"
-                         className="inline-flex h-9 items-center gap-1.5 rounded-control bg-ink px-3 text-sm font-medium text-paper transition-colors hover:bg-ink/85 sm:px-4">
-                    <svg viewBox="0 0 20 20" className="hidden h-4 w-4 text-amber sm:block" aria-hidden="true">
-                        <path fill="currentColor" d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z"/>
-                    </svg>
-                    Generate
-                </NavLink>
-                <NavLink href="/profile" activeClassName="ring-2 ring-amber"
-                         className="rounded-full p-0.5 transition-shadow hover:ring-2 hover:ring-line-strong">
-                    <span className="sr-only">Profile: {name}</span>
-                    <span title={name}>
-                        <Avatar src={viewer.avatarUrl} initials={initialsFor(viewer.firstName, viewer.lastName, viewer.email)}/>
-                    </span>
-                </NavLink>
-                <button type="button" onClick={signOut} disabled={signingOut}
-                        className="inline-flex h-9 items-center rounded-control px-2 text-sm font-medium text-muted transition-colors hover:text-ink disabled:opacity-50 sm:px-3">
-                    <svg viewBox="0 0 20 20" className="h-5 w-5 sm:hidden" aria-hidden="true">
-                        <path fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
-                              d="M8 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8M13 13.5 16.5 10 13 6.5M16.5 10H8"/>
-                    </svg>
-                    <span className="sr-only sm:not-sr-only">{signingOut ? 'Signing out…' : 'Sign out'}</span>
-                </button>
-            </div>
-        );
+        return <AccountMenu viewer={viewer} onSignOut={signOut} signingOut={signingOut}/>;
     }
     return (
         <button type="button" onClick={signInWithGoogle}

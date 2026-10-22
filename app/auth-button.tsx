@@ -1,44 +1,14 @@
 'use client';
 import {useEffect, useState} from 'react';
+import {useRouter} from 'next/navigation';
 import {createClient} from '@/app/lib/supabase/client';
-import type {User} from '@supabase/supabase-js';
 import Link from 'next/link';
+import Avatar, {initialsFor} from './avatar';
+import type {Viewer} from './lib/viewer';
 
-export default function AuthButton() {
-    const supabase = createClient();
-    const [user, setUser] = useState<User | null>(null);
-    useEffect(() => {
-        supabase.auth.getUser().then(({data}) => setUser(data.user));
-        const {data: listener} = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-        });
-        return () => listener.subscription.unsubscribe();
-    }, [supabase]);
-    const signInWithGoogle = () => {
-        supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {redirectTo: `${window.location.origin}/auth/callback`},
-        }).catch(console.error);
-    };
-    const signOut = () => {
-        supabase.auth.signOut().then(() => window.location.reload());
-    };
-    if (user) {
-        return (
-            <div className="flex items-center gap-3"><span className="text-sm text-zinc-600">{user.email}</span> <Link
-                href="/profile"
-                className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100"> Profile </Link>
-                <Link href="/generate"
-                      className="rounded-full bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-800"> Generate </Link>
-                <button onClick={signOut}
-                        className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100"> Sign
-                    out
-                </button>
-            </div>);
-    }
-    return (<button onClick={signInWithGoogle}
-                    className="flex items-center gap-2 rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800">
-        <svg width="16" height="16" viewBox="0 0 48 48">
+export function GoogleIcon() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#FFC107"
                   d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/>
             <path fill="#FF3D00"
@@ -48,5 +18,72 @@ export default function AuthButton() {
             <path fill="#1976D2"
                   d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.3-4.1 5.7l6.6 5.4C41.9 36.2 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z"/>
         </svg>
-        Sign in with Google </button>);
+    );
+}
+
+export function useGoogleSignIn() {
+    const supabase = createClient();
+    return () => {
+        supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {redirectTo: `${window.location.origin}/auth/callback`},
+        }).catch(console.error);
+    };
+}
+
+export function SignInButton({className, children}: { className: string; children: React.ReactNode }) {
+    const signInWithGoogle = useGoogleSignIn();
+    return <button type="button" onClick={signInWithGoogle} className={className}>{children}</button>;
+}
+
+export default function AuthButton({viewer}: { viewer: Viewer | null }) {
+    const router = useRouter();
+    const supabase = createClient();
+    const signInWithGoogle = useGoogleSignIn();
+    const [signingOut, setSigningOut] = useState(false);
+    useEffect(() => {
+        // Keep the server-rendered header in sync if the session changes in another tab.
+        const {data: listener} = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!!session !== !!viewer) router.refresh();
+        });
+        return () => listener.subscription.unsubscribe();
+    }, [supabase, router, viewer]);
+    const signOut = () => {
+        setSigningOut(true);
+        supabase.auth.signOut().then(() => window.location.reload());
+    };
+    if (viewer) {
+        const name = [viewer.firstName, viewer.lastName].filter(Boolean).join(' ') || viewer.email || 'Your profile';
+        return (
+            <div className="flex items-center gap-1 sm:gap-2">
+                <Link href="/generate"
+                      className="inline-flex h-9 items-center gap-1.5 rounded-control bg-ink px-3 text-sm font-medium text-paper transition-colors hover:bg-ink/85 sm:px-4">
+                    <svg viewBox="0 0 20 20" className="hidden h-4 w-4 text-amber sm:block" aria-hidden="true">
+                        <path fill="currentColor" d="M10 4a1 1 0 0 1 1 1v4h4a1 1 0 1 1 0 2h-4v4a1 1 0 1 1-2 0v-4H5a1 1 0 1 1 0-2h4V5a1 1 0 0 1 1-1Z"/>
+                    </svg>
+                    Generate
+                </Link>
+                <Link href="/profile" aria-label={`Profile: ${name}`} title={name}
+                      className="rounded-full p-0.5 transition-shadow hover:ring-2 hover:ring-line-strong">
+                    <Avatar src={viewer.avatarUrl} initials={initialsFor(viewer.firstName, viewer.lastName, viewer.email)}/>
+                </Link>
+                <button type="button" onClick={signOut} disabled={signingOut}
+                        className="inline-flex h-9 items-center rounded-control px-2 text-sm font-medium text-muted transition-colors hover:text-ink disabled:opacity-50 sm:px-3">
+                    <svg viewBox="0 0 20 20" className="h-5 w-5 sm:hidden" aria-hidden="true">
+                        <path fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+                              d="M8 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8M13 13.5 16.5 10 13 6.5M16.5 10H8"/>
+                    </svg>
+                    <span className="sr-only sm:not-sr-only">{signingOut ? 'Signing out…' : 'Sign out'}</span>
+                </button>
+            </div>
+        );
+    }
+    return (
+        <button type="button" onClick={signInWithGoogle}
+                className="inline-flex h-9 items-center gap-2 rounded-control border border-line-strong bg-surface px-3 text-sm font-medium text-ink transition-colors hover:border-faint sm:px-4">
+            <GoogleIcon/>
+            <span className="sm:hidden">Sign in</span>
+            <span className="hidden sm:inline">Sign in with Google</span>
+        </button>
+    );
 }

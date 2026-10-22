@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import AuthButton from './auth-button';
+import NavLink from './nav-link';
 import {getViewer} from './lib/viewer';
 
 export function BrandMark({className = 'h-6 w-6'}: { className?: string }) {
@@ -23,10 +24,10 @@ export default async function SiteHeader() {
                     <span className="font-display text-lg font-semibold tracking-tight sm:text-xl">FeedbackLoops</span>
                 </Link>
                 <nav aria-label="Main" className="flex items-center gap-1 sm:gap-2">
-                    <Link href="/"
-                          className="hidden rounded-control px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-ink sm:block">
+                    <NavLink href="/" activeClassName="text-ink underline decoration-amber decoration-2 underline-offset-[6px]"
+                             className="hidden rounded-control px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-ink sm:block">
                         Feed
-                    </Link>
+                    </NavLink>
                     <AuthButton viewer={viewer}/>
                 </nav>
             </div>

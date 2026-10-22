@@ -2,34 +2,9 @@
 import {useEffect, useId, useRef, useState} from 'react';
 import Link from 'next/link';
 import {cleanCaption} from '../lib/caption';
-
-// Vercel rejects request bodies over 4.5 MB, so photos are shrunk in the browser before upload.
-const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
-const MAX_EDGE_PX = 2048;
-const PASSTHROUGH_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+import {prepareImage} from '../lib/prepare-image';
 
 type Status = 'idle' | 'ready' | 'generating' | 'done';
-
-async function prepareImage(file: File): Promise<File> {
-    if (PASSTHROUGH_TYPES.includes(file.type) && file.size <= MAX_UPLOAD_BYTES) return file;
-    let bitmap: ImageBitmap;
-    try {
-        bitmap = await createImageBitmap(file);
-    } catch {
-        throw new Error('This photo format isn’t supported here. Try a JPG or PNG.');
-    }
-    const scale = Math.min(1, MAX_EDGE_PX / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
-    if (!blob || blob.size > MAX_UPLOAD_BYTES) {
-        throw new Error('This photo is too large to upload. Try a smaller one.');
-    }
-    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {type: 'image/jpeg'});
-}
 
 function PhotoIcon({className}: { className: string }) {
     return (

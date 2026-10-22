@@ -6,6 +6,7 @@ import FeedImage from './feed-image';
 import Avatar, {initialsFor} from './avatar';
 import {GoogleIcon, SignInButton} from './auth-button';
 import {getViewer} from './lib/viewer';
+import {cleanCaption} from './lib/caption';
 
 const relativeTime = new Intl.RelativeTimeFormat('en', {numeric: 'auto'});
 const fullDate = new Intl.DateTimeFormat('en', {dateStyle: 'medium', timeStyle: 'short'});
@@ -17,11 +18,6 @@ function timeAgo(iso: string) {
         if (Math.abs(seconds) >= size) return relativeTime.format(Math.round(seconds / size), unit);
     }
     return 'just now';
-}
-
-// Gemini often wraps its caption in quote marks; the design adds its own emphasis.
-function cleanCaption(caption: string) {
-    return caption.trim().replace(/^["“']([\s\S]*)["”']$/, '$1').trim();
 }
 
 export default async function Home() {

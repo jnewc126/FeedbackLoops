@@ -1,172 +1,116 @@
-'use client';
-
-import {useEffect, useState} from 'react';
-import {useRouter} from 'next/navigation';
-import {createClient} from '@/app/lib/supabase/client';
-import type {User} from '@supabase/supabase-js';
+import type {Metadata} from 'next';
 import Link from 'next/link';
+import {createClient} from '@/app/lib/supabase/server';
+import {getViewer} from '../lib/viewer';
+import {GoogleIcon, SignInButton} from '../auth-button';
+import CaptionCard from '../caption-card';
+import ProfileForm from './profile-form';
 
+export const metadata: Metadata = {
+    title: 'Your profile',
+};
 
-export default function ProfilePage() {
-    const router = useRouter();
-    const supabase = createClient();
-    const [user, setUser] = useState<User | null>(null);
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-    const [uploading, setUploading] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const load = async () => {
-            const {
-                data: {user},
-            } = await supabase.auth.getUser();
-
-            if (!user) {
-                router.push('/');
-                return;
-            }
-
-            setUser(user);
-
-            const {data: profile} = await supabase
-                .from('profiles')
-                .select('first_name, last_name, avatar_url')
-                .eq('id', user.id)
-                .single();
-
-            setFirstName(profile?.first_name ?? '');
-            setLastName(profile?.last_name ?? '');
-            setAvatarUrl(profile?.avatar_url ?? null);
-            setLoading(false);
-        };
-
-        load();
-    }, [supabase, router]);
-
-    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file || !user) return;
-
-        setUploading(true);
-        setMessage('');
-
-        const fileExt = file.name.split('.').pop();
-        const filePath = `${user.id}/avatar.${fileExt}`;
-
-        const {error: uploadError} = await supabase.storage
-            .from('avatars')
-            .upload(filePath, file, {upsert: true});
-
-        if (uploadError) {
-            setMessage(uploadError.message);
-            setUploading(false);
-            return;
-        }
-
-        const {
-            data: {publicUrl},
-        } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-        const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
-
-        const {error: updateError} = await supabase
-            .from('profiles')
-            .update({avatar_url: cacheBustedUrl})
-            .eq('id', user.id);
-
-        if (updateError) {
-            setMessage(updateError.message);
-        } else {
-            setAvatarUrl(cacheBustedUrl);
-        }
-
-        setUploading(false);
-    };
-
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) return;
-
-        setSaving(true);
-        setMessage('');
-
-        const {error} = await supabase
-            .from('profiles')
-            .update({first_name: firstName, last_name: lastName})
-            .eq('id', user.id);
-
-        setSaving(false);
-        setMessage(error ? error.message : 'Saved!');
-    };
-
-    if (loading) {
+export default async function ProfilePage() {
+    const viewer = await getViewer();
+    if (!viewer) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-                <p className="text-zinc-500">Loading...</p>
+            <div className="page-container pb-20 pt-8 sm:pt-14">
+                <section aria-labelledby="profile-signin"
+                         className="mx-auto flex max-w-xl flex-col items-center rounded-card border border-dashed border-line-strong bg-surface px-6 py-16 text-center">
+                    <h1 id="profile-signin" className="font-display text-3xl text-ink">Sign in to see your profile</h1>
+                    <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
+                        Your profile holds your name, your photo and every caption you&apos;ve posted.
+                    </p>
+                    <SignInButton
+                        className="mt-6 inline-flex h-11 items-center gap-2 rounded-control bg-ink px-5 text-sm font-semibold text-paper transition-colors hover:bg-ink/85">
+                        <GoogleIcon/>
+                        Sign in with Google
+                    </SignInButton>
+                </section>
             </div>
         );
     }
 
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-10">
-            <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
-                <div className="mb-6 flex items-center justify-between"><h1
-                    className="text-xl font-bold text-zinc-900">Your Profile</h1> <Link href="/"
-                                                                                        className="text-sm font-medium text-zinc-500 underline"> Back
-                    home </Link></div>
+    const supabase = await createClient();
+    const {data: generations} = await supabase.from('generations')
+        .select('id, image_url, caption, created_at')
+        .eq('user_id', viewer.id)
+        .order('created_at', {ascending: false});
+    const ids = generations?.map((g) => g.id) ?? [];
+    const {data: votes} = ids.length > 0
+        ? await supabase.from('votes').select('generation_id, user_id, value').in('generation_id', ids)
+        : {data: []};
+    const scores: Record<string, number> = {};
+    const myVotes: Record<string, number> = {};
+    votes?.forEach((v) => {
+        scores[v.generation_id] = (scores[v.generation_id] ?? 0) + v.value;
+        if (v.user_id === viewer.id) myVotes[v.generation_id] = v.value;
+    });
+    const totalScore = Object.values(scores).reduce((sum, s) => sum + s, 0);
+    const count = generations?.length ?? 0;
+    const name = [viewer.firstName, viewer.lastName].filter(Boolean).join(' ') || 'Your profile';
 
-                <div className="mb-6 flex flex-col items-center gap-3">
-                    {avatarUrl ? (
-                        <img src={avatarUrl} alt="Profile" className="h-24 w-24 rounded-full object-cover"/>
+    return (
+        <div className="page-container pb-20">
+            <header className="border-b border-line pb-8 pt-8 sm:pt-14">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-amber-deep">Your profile</p>
+                <h1 className="font-display text-4xl font-medium leading-[1.05] tracking-tight text-ink sm:text-5xl">
+                    {name}
+                </h1>
+                <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                    <div className="flex items-baseline gap-2">
+                        <dt className="text-muted">Captions posted</dt>
+                        <dd className="font-semibold tabular-nums text-ink">{count}</dd>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <dt className="text-muted">Net votes received</dt>
+                        <dd className={`font-semibold tabular-nums ${totalScore > 0 ? 'text-up' : totalScore < 0 ? 'text-down' : 'text-ink'}`}>
+                            {totalScore > 0 ? `+${totalScore}` : totalScore}
+                        </dd>
+                    </div>
+                </dl>
+            </header>
+
+            <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
+                <section aria-labelledby="details-title" className="lg:sticky lg:top-24 lg:self-start">
+                    <h2 id="details-title" className="font-display text-2xl text-ink">Profile details</h2>
+                    <p className="mt-1 text-sm text-muted">Your name and photo appear next to everything you post.</p>
+                    <ProfileForm userId={viewer.id} email={viewer.email} initialFirstName={viewer.firstName ?? ''}
+                                 initialLastName={viewer.lastName ?? ''} initialAvatarUrl={viewer.avatarUrl}/>
+                </section>
+
+                <section aria-labelledby="captions-title">
+                    <div className="flex items-baseline justify-between gap-4">
+                        <h2 id="captions-title" className="font-display text-2xl text-ink">Your captions</h2>
+                        {count > 0 && (
+                            <Link href="/generate"
+                                  className="shrink-0 rounded-control text-sm font-semibold text-amber-deep underline-offset-4 hover:underline">
+                                Caption another photo
+                            </Link>
+                        )}
+                    </div>
+                    {count > 0 ? (
+                        <ul className="mt-6 grid gap-x-6 gap-y-10 sm:grid-cols-2">
+                            {generations!.map((gen) => (
+                                <li key={gen.id}>
+                                    <CaptionCard gen={gen} score={scores[gen.id] ?? 0}
+                                                 userVote={myVotes[gen.id] ?? 0} isLoggedIn/>
+                                </li>
+                            ))}
+                        </ul>
                     ) : (
-                        <div
-                            className="flex h-24 w-24 items-center justify-center rounded-full bg-zinc-200 text-2xl text-zinc-500">
-                            ?
+                        <div className="mt-6 flex flex-col items-center rounded-card border border-dashed border-line-strong px-6 py-14 text-center">
+                            <p className="font-display text-xl text-ink">Nothing posted yet</p>
+                            <p className="mt-2 max-w-sm text-sm text-muted">
+                                Upload a photo, see what the AI writes, and find out if the community agrees.
+                            </p>
+                            <Link href="/generate"
+                                  className="mt-6 inline-flex h-11 items-center rounded-control bg-amber px-5 text-sm font-semibold text-ink transition-colors hover:bg-amber-strong">
+                                Caption your first photo
+                            </Link>
                         </div>
                     )}
-                    <label className="cursor-pointer text-sm font-medium text-zinc-700 underline">
-                        {uploading ? 'Uploading...' : 'Change photo'}
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handlePhotoChange}
-                            disabled={uploading}
-                            className="hidden"
-                        />
-                    </label>
-                </div>
-
-                <form onSubmit={handleSave}>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">First name</label>
-                    <input
-                        type="text"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        className="mb-4 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-                    />
-
-                    <label className="mb-1 block text-sm font-medium text-zinc-700">Last name</label>
-                    <input
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className="mb-6 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
-                    />
-
-                    {message && <p className="mb-4 text-sm text-zinc-600">{message}</p>}
-
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"
-                    >
-                        {saving ? 'Saving...' : 'Save changes'}
-                    </button>
-                </form>
+                </section>
             </div>
         </div>
     );

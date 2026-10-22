@@ -1,62 +1,73 @@
-'use client';
-import {useState} from 'react';
-import {useRouter} from 'next/navigation';
+import type {Metadata} from 'next';
+import {redirect} from 'next/navigation';
 import Link from 'next/link';
-import {createClient} from '@/app/lib/supabase/client';
+import {GoogleIcon, SignInButton} from '../auth-button';
+import {getViewer} from '../lib/viewer';
+import GenerateForm from './generate-form';
 
-export default function GeneratePage() {
-    const router = useRouter();
-    const supabase = createClient();
-    const [file, setFile] = useState<File | null>(null);
-    const [preview, setPreview] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [caption, setCaption] = useState<string | null>(null);
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selected = e.target.files?.[0];
-        if (!selected) return;
-        setFile(selected);
-        setPreview(URL.createObjectURL(selected));
-        setCaption(null);
-        setError('');
-    };
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!file) return;
-        const {data: {user},} = await supabase.auth.getUser();
-        if (!user) {
-            router.push('/');
-            return;
-        }
-        setLoading(true);
-        setError('');
-        const formData = new FormData();
-        formData.append('image', file);
-        const res = await fetch('/api/generate', {method: 'POST', body: formData,});
-        const json = await res.json();
-        setLoading(false);
-        if (!res.ok) {
-            setError(json.error ?? 'Something went wrong.');
-            return;
-        }
-        setCaption(json.generation.caption);
-    };
-    return (<div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-10">
-        <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-8 shadow-sm">
-            <div className="mb-6 flex items-center justify-between"><h1
-                className="text-xl font-bold text-zinc-900">Generate a Caption</h1> <Link href="/"
-                                                                                          className="text-sm font-medium text-zinc-500 underline"> Back
-                home </Link></div>
-            <form onSubmit={handleSubmit}><input type="file" accept="image/*" onChange={handleFileChange}
-                                                 className="mb-4 w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-zinc-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white file:transition hover:file:bg-zinc-800"/> {preview && (
-                <img src={preview} alt="Preview" className="mb-4 h-48 w-full rounded-md object-cover"/>)} {error &&
-                <p className="mb-4 text-sm text-red-600">{error}</p>} {caption && (
-                <p className="mb-4 rounded-md bg-zinc-100 p-3 text-sm italic text-zinc-800"> &quot;{caption}&quot; </p>)}
-                <button type="submit" disabled={!file || loading}
-                        className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"> {loading ? 'Generating...' : 'Generate caption'} </button>
-            </form>
-            {caption && (
-                <Link href="/" className="mt-4 block text-center text-sm font-medium text-zinc-700 underline"> View in
-                    feed </Link>)} </div>
-    </div>);
+export const metadata: Metadata = {
+    title: 'Caption a photo',
+};
+
+const steps = [
+    {title: 'Add a photo', body: 'Anything with a story in it: a pet, a street scene, a questionable lunch.'},
+    {title: 'Gemini writes a caption', body: 'Google’s model looks at the photo and tries to be funny in under 20 words.'},
+    {title: 'The community votes', body: 'Your photo goes into the public feed, where people decide if the caption landed.'},
+];
+
+export default async function GeneratePage() {
+    const viewer = await getViewer();
+    if (viewer && (!viewer.firstName || !viewer.lastName)) {
+        redirect('/complete-profile');
+    }
+    return (
+        <div className="page-container pb-20">
+            <div className="grid gap-10 pt-8 sm:pt-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+                <section aria-labelledby="generate-title" className="lg:pt-2">
+                    <Link href="/"
+                          className="-ml-1 mb-6 inline-flex items-center gap-1 rounded-control px-1 text-sm font-medium text-muted transition-colors hover:text-ink">
+                        <span aria-hidden="true">←</span> Back to the feed
+                    </Link>
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-amber-deep">New caption</p>
+                    <h1 id="generate-title"
+                        className="font-display text-4xl font-medium leading-[1.05] tracking-tight text-ink sm:text-5xl">
+                        Caption a photo
+                    </h1>
+                    <p className="mt-4 max-w-md text-base leading-relaxed text-muted">
+                        Upload a photo and see what the AI makes of it. Then let everyone else be the judge.
+                    </p>
+                    <ol className="mt-10 hidden max-w-md border-t border-line lg:block">
+                        {steps.map((step, i) => (
+                            <li key={step.title} className="flex gap-4 border-b border-line py-5">
+                                <span
+                                    className="w-4 shrink-0 font-display text-lg leading-6 text-amber-deep tabular-nums">{i + 1}</span>
+                                <div>
+                                    <p className="text-sm font-semibold text-ink">{step.title}</p>
+                                    <p className="mt-1 text-sm leading-relaxed text-muted">{step.body}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ol>
+                </section>
+
+                {viewer ? (
+                    <GenerateForm/>
+                ) : (
+                    <section aria-label="Sign in required"
+                             className="flex flex-col items-center justify-center self-start rounded-card border border-dashed lg:aspect-[4/3] border-line-strong bg-surface px-6 py-16 text-center">
+                        <p className="font-display text-2xl text-ink">Sign in to caption a photo</p>
+                        <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
+                            Posting needs an account so your photos and votes are yours. Browsing the feed stays open to
+                            everyone.
+                        </p>
+                        <SignInButton
+                            className="mt-6 inline-flex h-11 items-center gap-2 rounded-control bg-ink px-5 text-sm font-semibold text-paper transition-colors hover:bg-ink/85">
+                            <GoogleIcon/>
+                            Sign in with Google
+                        </SignInButton>
+                    </section>
+                )}
+            </div>
+        </div>
+    );
 }

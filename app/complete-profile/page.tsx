@@ -1,53 +1,39 @@
-'use client';
-import {useState} from 'react';
-import {useRouter} from 'next/navigation';
-import {createClient} from '@/app/lib/supabase/client';
+import type {Metadata} from 'next';
+import {redirect} from 'next/navigation';
+import {createClient} from '@/app/lib/supabase/server';
+import {getViewer} from '../lib/viewer';
+import {BrandMark} from '../site-header';
+import CompleteProfileForm from './complete-profile-form';
 
-export default function CompleteProfile() {
-    const router = useRouter();
-    const supabase = createClient();
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        const {data: {user},} = await supabase.auth.getUser();
-        if (!user) {
-            router.push('/');
-            return;
-        }
-        const {error: updateError} = await supabase.from('profiles').update({
-            first_name: firstName,
-            last_name: lastName
-        }).eq('id', user.id);
-        setLoading(false);
-        if (updateError) {
-            setError(updateError.message);
-            return;
-        }
-        router.push('/');
-    };
-    return (<div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6">
-        <form onSubmit={handleSubmit}
-              className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-8 shadow-sm"><h1
-            className="mb-2 text-xl font-bold text-zinc-900">Welcome!</h1> <p
-            className="mb-6 text-sm text-zinc-600">Let&apos;s finish setting up your profile.</p> <label
-            className="mb-1 block text-sm font-medium text-zinc-700">First name</label> <input type="text"
-                                                                                               value={firstName}
-                                                                                               onChange={(e) => setFirstName(e.target.value)}
-                                                                                               required
-                                                                                               className="mb-4 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"/>
-            <label className="mb-1 block text-sm font-medium text-zinc-700">Last name</label> <input type="text"
-                                                                                                     value={lastName}
-                                                                                                     onChange={(e) => setLastName(e.target.value)}
-                                                                                                     required
-                                                                                                     className="mb-6 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"/> {error &&
-                <p className="mb-4 text-sm text-red-600">{error}</p>}
-            <button type="submit" disabled={loading}
-                    className="w-full rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"> {loading ? 'Saving...' : 'Save and continue'} </button>
-        </form>
-    </div>);
+export const metadata: Metadata = {
+    title: 'Finish setting up',
+};
+
+export default async function CompleteProfilePage() {
+    const viewer = await getViewer();
+    if (!viewer) redirect('/');
+    // Google usually shares the person's name, so the form can start filled in.
+    const supabase = await createClient();
+    const {data: {user}} = await supabase.auth.getUser();
+    const meta = user?.user_metadata ?? {};
+    const [fullFirst, ...fullRest] = String(meta.full_name ?? meta.name ?? '').trim().split(/\s+/);
+    const firstName = viewer.firstName ?? meta.given_name ?? fullFirst ?? '';
+    const lastName = viewer.lastName ?? meta.family_name ?? fullRest.join(' ');
+
+    return (
+        <div className="page-container pb-20 pt-10 sm:pt-20">
+            <div className="mx-auto max-w-md">
+                <BrandMark className="h-10 w-10 text-ink"/>
+                <p className="mb-3 mt-8 text-xs font-semibold uppercase tracking-[0.14em] text-amber-deep">One last step</p>
+                <h1 className="font-display text-4xl font-medium leading-[1.05] tracking-tight text-ink sm:text-5xl">
+                    Welcome to FeedbackLoops
+                </h1>
+                <p className="mt-4 text-base leading-relaxed text-muted">
+                    Tell us what to call you. Your name appears next to the photos you post, so people know whose
+                    caption they&apos;re voting on.
+                </p>
+                <CompleteProfileForm userId={viewer.id} initialFirstName={firstName} initialLastName={lastName}/>
+            </div>
+        </div>
+    );
 }

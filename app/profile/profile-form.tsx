@@ -7,7 +7,7 @@ import {prepareImage} from '../lib/prepare-image';
 
 type Notice = { tone: 'success' | 'error'; text: string } | null;
 
-const inputClass = 'h-11 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-faint transition-colors hover:border-faint focus:border-amber focus:outline-none focus:ring-2 focus:ring-amber/30';
+const inputClass = 'h-11 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-faint transition-colors hover:border-faint focus:border-amber';
 
 export default function ProfileForm({userId, email, initialFirstName, initialLastName, initialAvatarUrl}: {
     userId: string;

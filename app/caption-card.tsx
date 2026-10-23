@@ -27,20 +27,14 @@ export default function CaptionCard({gen, author, score, userVote, isLoggedIn}: 
 }) {
     const authorName = author ? [author.first_name, author.last_name].filter(Boolean).join(' ') : '';
     return (
-        <article className="flex h-full flex-col">
+        <article className="flex h-full flex-col overflow-hidden rounded-card border border-line bg-surface shadow-sm transition-shadow hover:shadow-lift">
             <a href={gen.image_url} target="_blank" rel="noopener noreferrer"
                aria-label="Open full-size photo in a new tab"
-               className="group block aspect-[4/3] overflow-hidden rounded-card bg-sunken ring-1 ring-line">
+               className="group block aspect-[3/2] overflow-hidden border-b border-line bg-sunken">
                 <FeedImage src={gen.image_url}
                            alt={authorName ? `Photo submitted by ${authorName}` : 'Submitted photo'}/>
             </a>
-            <div className="flex flex-1 flex-col pt-4">
-                <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-deep">
-                    <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
-                        <path fill="currentColor" d="M8 0l1.8 6.2L16 8l-6.2 1.8L8 16l-1.8-6.2L0 8l6.2-1.8z"/>
-                    </svg>
-                    AI caption
-                </p>
+            <div className="flex flex-1 flex-col p-4 sm:p-5">
                 <blockquote className="font-display text-xl leading-snug text-ink">
                     {cleanCaption(gen.caption ?? '')}
                 </blockquote>

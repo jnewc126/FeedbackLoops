@@ -3,6 +3,7 @@ import {useEffect, useId, useRef, useState} from 'react';
 import Link from 'next/link';
 import {cleanCaption} from '../lib/caption';
 import {prepareImage} from '../lib/prepare-image';
+import {HUMOR_STYLES, HUMOR_STYLE_KEYS, type HumorStyle} from '../lib/humor';
 
 type Status = 'idle' | 'ready' | 'generating' | 'done';
 
@@ -26,6 +27,7 @@ export default function GenerateForm() {
     const [dragging, setDragging] = useState(false);
     const [error, setError] = useState('');
     const [caption, setCaption] = useState('');
+    const [style, setStyle] = useState<HumorStyle>('light');
 
     // Release the old preview's memory whenever it changes or the page unmounts.
     useEffect(() => {
@@ -69,6 +71,7 @@ export default function GenerateForm() {
         setError('');
         const formData = new FormData();
         formData.append('image', file);
+        formData.append('style', style);
         try {
             const res = await fetch('/api/generate', {method: 'POST', body: formData});
             const json = await res.json().catch(() => ({}));
@@ -94,8 +97,25 @@ export default function GenerateForm() {
                onChange={(e) => choose(e.target.files?.[0])}/>
     );
 
+    const stylePicker = (
+        <fieldset className="mb-4" disabled={status === 'generating'}>
+            <legend className="sr-only">Humor style</legend>
+            <div className="grid grid-cols-3 gap-1 rounded-card border border-line bg-surface p-1">
+                {HUMOR_STYLE_KEYS.map((key) => (
+                    <label key={key}
+                           className={`flex h-11 cursor-pointer items-center justify-center rounded-control px-2 text-center text-sm font-semibold transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-amber ${style === key ? 'bg-ink text-paper' : 'text-muted hover:bg-sunken hover:text-ink'}`}>
+                        <input type="radio" name="humor-style" value={key} checked={style === key}
+                               onChange={() => setStyle(key)} className="sr-only"/>
+                        {HUMOR_STYLES[key].label}
+                    </label>
+                ))}
+            </div>
+        </fieldset>
+    );
+
     return (
         <section aria-label="Caption workspace" className="min-w-0">
+            {!preview && stylePicker}
             {!preview ? (
                 <label htmlFor={inputId}
                        onDragOver={(e) => {
@@ -142,12 +162,6 @@ export default function GenerateForm() {
 
                     {status === 'done' ? (
                         <figcaption className="pt-5">
-                            <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-deep">
-                                <svg viewBox="0 0 16 16" className="h-3 w-3" aria-hidden="true">
-                                    <path fill="currentColor" d="M8 0l1.8 6.2L16 8l-6.2 1.8L8 16l-1.8-6.2L0 8l6.2-1.8z"/>
-                                </svg>
-                                AI caption
-                            </p>
                             <blockquote className="font-display text-2xl leading-snug text-ink sm:text-3xl">
                                 {caption}
                             </blockquote>
@@ -170,7 +184,9 @@ export default function GenerateForm() {
                             </div>
                         </figcaption>
                     ) : (
-                        <div className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="pt-5">
+                        {stylePicker}
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0">
                                 {fileInput}
                                 <p className="truncate text-sm font-medium text-ink">{file?.name}</p>
@@ -183,6 +199,7 @@ export default function GenerateForm() {
                                     className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-control bg-amber px-5 text-sm font-semibold text-ink shadow-sm transition-colors hover:bg-amber-strong disabled:cursor-wait disabled:opacity-60">
                                 {status === 'generating' ? 'Writing caption…' : 'Write a caption'}
                             </button>
+                        </div>
                         </div>
                     )}
                 </figure>

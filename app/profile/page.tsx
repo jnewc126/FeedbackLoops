@@ -90,7 +90,7 @@ export default async function ProfilePage() {
                         )}
                     </div>
                     {count > 0 ? (
-                        <ul className="mt-6 grid gap-x-6 gap-y-10 sm:grid-cols-2">
+                        <ul className="mt-6 grid gap-6 sm:grid-cols-2">
                             {generations!.map((gen) => (
                                 <li key={gen.id}>
                                     <CaptionCard gen={gen} score={scores[gen.id] ?? 0}

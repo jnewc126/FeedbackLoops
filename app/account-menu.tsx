@@ -101,8 +101,11 @@ export default function AccountMenu({viewer, onSignOut, signingOut}: {
         <div ref={rootRef} className="relative" onPointerEnter={onPointerEnter} onPointerLeave={onPointerLeave}>
             <button ref={buttonRef} type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={menuId}
                     onClick={() => setOpen(!open)} onKeyDown={onButtonKeyDown}
-                    className={`flex items-center gap-1 rounded-full p-0.5 transition-shadow hover:ring-2 hover:ring-line-strong ${open ? 'ring-2 ring-line-strong' : ''}`}>
+                    className={`flex items-center gap-2 rounded-full border border-line-strong bg-surface py-0.5 pl-3 pr-0.5 text-muted transition-shadow hover:text-ink hover:shadow-lift ${open ? 'text-ink shadow-lift' : ''}`}>
                 <span className="sr-only">Account menu for {name}</span>
+                <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+                    <path fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13"/>
+                </svg>
                 <Avatar src={viewer.avatarUrl} initials={initialsFor(viewer.firstName, viewer.lastName, viewer.email)}/>
             </button>
 

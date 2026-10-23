@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import AuthButton from './auth-button';
 import NavLink from './nav-link';
+import HeaderCta from './header-cta';
 import {getViewer} from './lib/viewer';
 
 export function BrandMark({className = 'h-6 w-6'}: { className?: string }) {
@@ -21,7 +22,7 @@ export default async function SiteHeader() {
             <div className="page-container flex h-16 items-center justify-between gap-3">
                 <Link href="/" className="flex items-center gap-2 rounded-control text-ink">
                     <BrandMark/>
-                    <span className="font-display text-lg font-semibold tracking-tight sm:text-xl">FeedbackLoops</span>
+                    <span className="font-display text-lg font-semibold tracking-tight sm:text-xl">Can AI be Funny?</span>
                 </Link>
                 <nav aria-label="Main" className="flex items-center gap-1 sm:gap-2">
                     {!viewer && (
@@ -30,6 +31,7 @@ export default async function SiteHeader() {
                             Feed
                         </NavLink>
                     )}
+                    {viewer && <HeaderCta/>}
                     <AuthButton viewer={viewer}/>
                 </nav>
             </div>

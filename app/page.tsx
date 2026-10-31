@@ -7,7 +7,7 @@ import {getViewer} from './lib/viewer';
 import {HUMOR_STYLES, HUMOR_STYLE_KEYS, isHumorStyle} from './lib/humor';
 
 export default async function Home({searchParams}: PageProps<'/'>) {
-    const {style: styleParam} = await searchParams;
+    const {style: styleParam, signup} = await searchParams;
     const style = isHumorStyle(styleParam) ? styleParam : null;
     const supabase = await createServerClient();
     const user = await getViewer();
@@ -34,6 +34,11 @@ export default async function Home({searchParams}: PageProps<'/'>) {
         }
     });
     return (<div className="page-container pb-20">
+        {signup === 'blocked' && (
+            <div role="alert" className="mt-6 rounded-card border border-down/20 bg-down-soft px-5 py-4 text-sm text-down">
+                That account isn&apos;t on the list of people who can sign in to FeedbackLoops yet. Ask an admin to add your email or school domain.
+            </div>
+        )}
         <section className="flex flex-col gap-4 border-b border-line py-6 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
             <h1 className="font-display text-2xl font-medium leading-tight tracking-tight text-ink sm:text-3xl">
                 See if AI can make a funny joke of your picture <span aria-hidden="true" className="text-amber">→</span>

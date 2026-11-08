@@ -10,6 +10,7 @@ export type ChainStep = {
     template: string;
     modelId: number | null;
     modelKey: string;
+    includeImage: boolean;
 };
 
 export type Chain = {
@@ -25,7 +26,7 @@ export function fallbackChain(style: HumorStyle): Chain {
         id: null,
         terms: '',
         examples: '',
-        steps: [{id: null, stepOrder: 1, title: 'Write the caption', template: captionPrompt(style), modelId: null, modelKey: DEFAULT_MODEL}],
+        steps: [{id: null, stepOrder: 1, title: 'Write the caption', template: captionPrompt(style), modelId: null, modelKey: DEFAULT_MODEL, includeImage: true}],
     };
 }
 
@@ -48,7 +49,7 @@ export async function loadChain(supabase: SupabaseClient, style: HumorStyle): Pr
     const chainId = pickWeighted(mix).chain_id as number;
 
     const [{data: steps}, {data: terms}, {data: examples}] = await Promise.all([
-        supabase.from('prompt_chain_steps').select('id, step_order, title, prompt_template, model_id, llm_models(model_key, is_active)')
+        supabase.from('prompt_chain_steps').select('id, step_order, title, prompt_template, include_image, model_id, llm_models(model_key, is_active)')
             .eq('chain_id', chainId).order('step_order'),
         supabase.from('terms').select('term, definition').or(`humor_style.eq.${style},humor_style.is.null`),
         supabase.from('caption_examples').select('image_description, caption')
@@ -65,6 +66,7 @@ export async function loadChain(supabase: SupabaseClient, style: HumorStyle): Pr
                 stepOrder: s.step_order,
                 title: s.title,
                 template: s.prompt_template,
+                includeImage: s.include_image,
                 modelId: model?.is_active ? s.model_id : null,
                 modelKey: model?.is_active ? model.model_key : DEFAULT_MODEL,
             };

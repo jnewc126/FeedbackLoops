@@ -68,16 +68,19 @@ export async function POST(request: Request) {
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     let previous = '';
+    const outputs: Record<string, string> = {};
     let prompt = '';
     for (const step of chain.steps) {
-        prompt = renderPrompt(step.template, {previous, terms: chain.terms, examples: chain.examples});
+        prompt = renderPrompt(step.template, {...outputs, previous, terms: chain.terms, examples: chain.examples});
         const started = Date.now();
         let text = '';
         let finishReason: string | null = null;
         let blocked = false;
         try {
             const model = genAI.getGenerativeModel({model: step.modelKey});
-            const result = await model.generateContent([{inlineData: {data: base64Data, mimeType: file.type}}, prompt,]);
+            // Some steps only work from earlier steps' text, e.g. "turn step 2 into five captions".
+            const parts = step.includeImage ? [{inlineData: {data: base64Data, mimeType: file.type}}, prompt] : [prompt];
+            const result = await model.generateContent(parts);
             finishReason = result.response.promptFeedback?.blockReason ?? result.response.candidates?.[0]?.finishReason ?? null;
             // Gemini's safety filters can refuse a caption (most often for Dark Humor). Say so plainly.
             blocked = !!result.response.promptFeedback?.blockReason || finishReason === 'SAFETY';
@@ -108,6 +111,7 @@ export async function POST(request: Request) {
             return fail('failed', 'The AI came back empty-handed. Try a different photo.', 502);
         }
         previous = text;
+        outputs[`step_${chain.steps.indexOf(step) + 1}`] = text;
     }
     const caption = previous;
     const {data: generation, error: insertError} = await supabase.from('generations').insert({
